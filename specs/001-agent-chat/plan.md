@@ -4,33 +4,34 @@
 
 **Input**: Feature specification from `/specs/001-agent-chat/spec.md`
 
-**Note**: This template is filled in by the `/speckit-plan` command; its definition describes the execution workflow.
+**Note**: Updated for AG-UI transport and Vercel AI Gateway + Gemini.
 
 ## Summary
 
-Build a minimal Traditional Chinese agent chat app: a **Vite + React** web UI using
-**assistant-ui** for the chat thread/composer UX, talking to an **Agno AgentOS**
-backend that streams replies over SSE via `POST /agents/{agent_id}/runs`. The
-frontend obtains the backend base URL from `VITE_BACKEND_URL`. v1 is a single
-in-browser thread, no auth, no durable database, no RAG/tools/uploads/production
-deploy.
+Build a minimal Traditional Chinese agent chat app: a **Vite + React** web UI
+using **assistant-ui** (`@assistant-ui/react-ag-ui` + `HttpAgent`) talking to an
+**Agno AgentOS** backend with the **AG-UI** interface (`POST /agui`,
+`GET /status`). The LLM is reached through **Vercel AI Gateway** using model
+`google/gemini-3.5-flash-lite` (OpenAI-compatible client via Agno `OpenAILike`).
+The frontend obtains the full agent endpoint from `VITE_AGENT_URL`. v1 is a
+single in-browser thread, no auth, no durable database, no RAG/tools/uploads/
+production deploy.
 
 ## Technical Context
 
 **Language/Version**: Python 3.12 (backend), TypeScript 5.x + React 19 (frontend)
 
 **Primary Dependencies**:
-- Backend: `agno[os]` (AgentOS/FastAPI), model provider SDK as required by Agno
-  (default OpenAI-compatible via env key)
-- Frontend: `@assistant-ui/react`, Vite, React; custom LocalRuntime
-  `ChatModelAdapter` that consumes AgentOS SSE (not AI SDK data-stream)
+- Backend: `agno[os,agui]` (AgentOS + AGUI), `openai` client library pointed at
+  Vercel AI Gateway (`AI_GATEWAY_API_KEY`, `AI_GATEWAY_BASE_URL`)
+- Frontend: `@assistant-ui/react`, `@assistant-ui/react-ag-ui`, `@ag-ui/client`,
+  Vite, React
 
 **Storage**: N/A for product data — no durable database. Conversation lives in
-the browser session. Agent turns are request-scoped; optional short transcript
-prefix may be sent in the run `message` for multi-turn context (see research.md).
+the browser session.
 
-**Testing**: pytest (backend unit/contract/integration), Vitest + Testing Library
-(frontend unit), manual quickstart stream check
+**Testing**: pytest (backend unit/contract), frontend production build check,
+manual AG-UI stream check with gateway key
 
 **Target Platform**: Local developer machines (Linux/macOS); desktop browser
 
@@ -40,8 +41,9 @@ prefix may be sent in the run `message` for multi-turn context (see research.md)
 conditions; progressive UI updates during reply (spec SC-001/SC-002)
 
 **Constraints**: Single chat thread; Traditional Chinese input; no login; no
-durable DB; no RAG/tools/uploads; no production deployment; backend health via
-`GET /health`; frontend backend URL via env var
+durable DB; no RAG/tools/uploads; no production deployment; AG-UI `/status`
+(+ AgentOS `/health`); frontend full agent URL via `VITE_AGENT_URL`; model via
+Vercel AI Gateway (not direct OpenAI)
 
 **Scale/Scope**: Single demo agent, single user session, one conversation thread
 per page load
@@ -52,19 +54,16 @@ per page load
 
 | Principle | Gate | Status |
 | --- | --- | --- |
-| I. Do Not Distribute by Default | Prefer one deployable; justify extra processes | **PASS WITH JUSTIFICATION** — see Complexity Tracking (local DX: Vite + AgentOS) |
-| II. Optimize for Deletion | Modules rewritable in a day; no speculative frameworks | **PASS** — thin adapter + one AgentOS entry module + one Thread page |
-| III. Make Dependencies Explicit | No hidden globals; deps in signatures/file tops; DI over singletons | **PASS** — config from env at composition root; adapter receives base URL/agent id |
-| IV. Contract at the Boundary | Versioned schemas at HTTP boundaries | **PASS** — contracts for `/health` and `/agents/{agent_id}/runs` (+ SSE events) |
-| V. Test the Transformation | Unit pure logic; integration at boundaries; no mock-owned code | **PASS** — unit-test SSE→UI text mapping; contract/integration for health + run stream |
-| VI. Emit Structured Events | Structured events with high-cardinality fields on request path | **PASS** — request-path logging as structured events (`request_id`, `session_id`, `agent_id`); no free-form logs in new code |
-| VII. Recovery Over Prevention | Revertible without code change; expand-then-contract N/A | **PASS** — no migrations; stop processes / refresh page to reset session state |
-| VIII. Attention Is Finite | No decorative alerts | **PASS** — v1 has no paging alerts; health is on-demand only |
-| IX. Value at the User | Done = runnable, observable, revertible locally | **PASS** — quickstart proves chat + health; local stop is the rollback |
-| X. Commands Discoverable | One command catalog; local == CI | **PASS** — root command list for `backend`, `frontend`, `test`, `health` |
-
-**Post-design re-check**: Unchanged — design keeps two local processes only as
-justified, contracts versioned, no durable DB, no extra queues/services.
+| I. Do Not Distribute by Default | Prefer one deployable; justify extra processes | **PASS WITH JUSTIFICATION** — Vite UI + AgentOS (organizational independence of toolchains); no BFF |
+| II. Optimize for Deletion | Modules rewritable in a day | **PASS** — thin RuntimeProvider + AgentOS entry + agent factory |
+| III. Make Dependencies Explicit | No hidden globals; env at composition root | **PASS** — `VITE_AGENT_URL`, `AI_GATEWAY_*`, `AGENT_*` loaded explicitly |
+| IV. Contract at the Boundary | Versioned schemas at HTTP boundaries | **PASS** — AG-UI `/agui` + `/status` (+ `/health`) contracts |
+| V. Test the Transformation | Unit/integration at boundaries | **PASS** — status/health/config tests; stream needs gateway key |
+| VI. Emit Structured Events | Structured events on request path | **PASS** — prefer structured logging; no free-form new logs |
+| VII. Recovery Over Prevention | Revertible without code change | **PASS** — stop processes / refresh page |
+| VIII. Attention Is Finite | No decorative alerts | **PASS** — on-demand status/health only |
+| IX. Value at the User | Runnable, observable, revertible locally | **PASS** — Makefile quickstart |
+| X. Commands Discoverable | One command catalog; local == CI | **PASS** — root Makefile |
 
 ## Project Structure
 
@@ -77,9 +76,11 @@ specs/001-agent-chat/
 ├── data-model.md
 ├── quickstart.md
 ├── contracts/
+│   ├── agui-run.openapi.yaml
+│   ├── agui-status.openapi.yaml
 │   ├── health.openapi.yaml
-│   └── agent-run.openapi.yaml
-└── tasks.md                 # /speckit-tasks (not created here)
+│   └── agent-run.openapi.yaml   # legacy AgentOS runs (superseded for UI path)
+└── tasks.md
 ```
 
 ### Source Code (repository root)
@@ -87,43 +88,28 @@ specs/001-agent-chat/
 ```text
 backend/
 ├── pyproject.toml
-├── src/
-│   └── agent_chat/
-│       ├── __init__.py
-│       ├── app.py              # AgentOS composition + serve entry
-│       ├── agent.py            # Agent factory (id, instructions, model)
-│       └── config.py           # explicit env config
+├── src/agent_chat/
+│   ├── app.py
+│   ├── agent.py          # OpenAILike → Vercel AI Gateway / Gemini
+│   └── config.py
 └── tests/
-    ├── unit/
-    ├── contract/
-    └── integration/
 
 frontend/
 ├── package.json
-├── vite.config.ts
-├── index.html
 ├── src/
-│   ├── main.tsx
-│   ├── App.tsx
-│   ├── config.ts               # VITE_BACKEND_URL, VITE_AGENT_ID
-│   ├── runtime/
-│   │   └── agnoChatAdapter.ts  # LocalRuntime ChatModelAdapter → AgentOS SSE
-│   ├── lib/
-│   │   └── sse.ts              # SSE parse helpers (pure)
-│   └── components/
-│       └── ChatThread.tsx      # assistant-ui Thread composition
-└── tests/
+│   ├── config.ts         # VITE_AGENT_URL
+│   ├── RuntimeProvider.tsx
+│   └── components/ChatThread.tsx
+└── ...
 
-Makefile                        # single command catalog (local == CI targets)
+Makefile
 ```
 
-**Structure Decision**: Split `backend/` (Agno AgentOS) and `frontend/`
-(assistant-ui + Vite) because the stacks are different languages/toolchains.
-No monorepo packages beyond this. No BFF process — the browser talks to AgentOS
-directly through the adapter.
+**Structure Decision**: Split `backend/` (Agno AgentOS + AGUI) and `frontend/`
+(assistant-ui). Browser talks to AgentOS AG-UI directly — no BFF.
 
 ## Complexity Tracking
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 | --- | --- | --- |
-| Two local processes (Vite UI + AgentOS) | React/assistant-ui and Python/AgentOS have separate runtimes and hot-reload needs (**organizational independence** of UI vs agent toolchain). Production packaging is out of scope for v1. | Serving a static UI from AgentOS alone removes Vite HMR and slows UI iteration; embedding React inside Python is not supported. A third BFF process was rejected as extra distribution. |
+| Two local processes (Vite UI + AgentOS) | React/assistant-ui and Python/AgentOS have separate runtimes (**organizational independence**). Production packaging out of scope. | Static-only UI from AgentOS removes HMR; a third BFF adds distribution. |

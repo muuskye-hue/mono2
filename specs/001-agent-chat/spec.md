@@ -120,8 +120,9 @@ change the value and confirm the UI targets the new location.
   session in v1 (no thread list, no thread switching, no thread creation).
 - **FR-006**: Backend MUST expose a health/status endpoint that returns a
   successful healthy indication when the service is running.
-- **FR-007**: Web UI MUST obtain the backend base location from an
-  environment variable (with a documented development default when unset).
+- **FR-007**: Web UI MUST obtain the full agent endpoint URL (including the
+  AG-UI path) from an environment variable (with a documented development
+  default when unset).
 - **FR-008**: System MUST reject empty or whitespace-only messages without
   invoking the agent.
 - **FR-009**: System MUST surface a user-visible error when the backend is
@@ -181,8 +182,9 @@ change the value and confirm the UI targets the new location.
 - Target users are developers or demo visitors using a desktop browser;
   responsive polish for mobile is nice-to-have, not required for v1.
 - “Agent” means a backend-driven conversational responder that produces
-  natural-language replies to the user’s messages; model vendor, prompts,
-  and runtime are planning concerns, not part of this specification.
+  natural-language replies to the user’s messages. v1 model access is via
+  **Vercel AI Gateway** with default model `google/gemini-3.5-flash-lite`
+  (planning/runtime concern documented in plan.md).
 - Replies SHOULD be intelligible for Traditional Chinese input; exact
   bilingual policy is left to planning (default: reply in the user’s
   language when practical).

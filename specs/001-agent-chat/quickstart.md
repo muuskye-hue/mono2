@@ -11,18 +11,20 @@ Validate the feature end-to-end on a local machine. Contracts:
 ## Prerequisites
 
 - Python 3.12+, Node.js 20+, `uv`, npm
-- Model API key available to Agno (default: `OPENAI_API_KEY`)
+- **Vercel AI Gateway** API key (`AI_GATEWAY_API_KEY`)
 - Ports **7777** (AgentOS / AG-UI) and **5173** (Vite) free
 
 ## Setup
 
 ```bash
 # from repo root — use the same catalog CI will use
-make install          # backend uv sync + frontend npm install
+make install
 
-export OPENAI_API_KEY=...   # or provider key required by chosen model
-# optional frontend override — FULL AG-UI endpoint including /agui:
-export VITE_AGENT_URL=http://localhost:7777/agui
+export AI_GATEWAY_API_KEY=...   # Vercel AI Gateway dashboard
+# defaults (override if needed):
+# export AI_GATEWAY_BASE_URL=https://ai-gateway.vercel.sh/v1
+# export AGENT_MODEL_ID=google/gemini-3.5-flash-lite
+# export VITE_AGENT_URL=http://localhost:7777/agui
 ```
 
 ## Run
@@ -49,29 +51,16 @@ make health
 # {"status":"ok","instantiated_at":"..."}
 ```
 
-Stop backend and retry — **Expect**: connection failure / non-success.
-
 ### 2. Streaming chat (SC-001 / SC-002 / User Story 1)
 
 1. Open the UI.
 2. Send a Traditional Chinese message (e.g. `用繁體中文自我介紹`).
-3. **Expect**: user message appears; assistant text grows in ≥2 visible updates
-   before completion; send is disabled while streaming.
-4. Send a follow-up — **Expect**: both turns remain in the same single thread.
+3. **Expect**: progressive streamed assistant reply via Gateway → Gemini.
 
 ### 3. Agent endpoint via env (SC-004 / User Story 3)
 
-1. Start AgentOS on an alternate port (e.g. 7778).
-2. Restart frontend with `VITE_AGENT_URL=http://localhost:7778/agui`.
-3. Send a message — **Expect**: reply succeeds against the new backend.
-
-### 4. Edge checks
-
-| Case | Expect |
-| --- | --- |
-| Empty / whitespace send | Blocked in UI; no AgentOS run |
-| Backend down mid-session | User-visible error; prior messages remain |
-| Refresh page | Thread cleared (session-only) |
+Restart frontend with a different full AG-UI URL, e.g.
+`VITE_AGENT_URL=http://localhost:7778/agui`.
 
 ## Automated checks
 
@@ -79,13 +68,11 @@ Stop backend and retry — **Expect**: connection failure / non-success.
 make test             # backend pytest + frontend build (same as CI)
 ```
 
-Contract tests assert `/status` and `/health`. Full AG-UI stream requires a
-model API key (manual quickstart above).
-
 ## Done when
 
 - [x] `make status` returns `status: available`
 - [x] `make health` returns `status: ok`
-- [ ] UI shows progressive streamed reply for Traditional Chinese input (needs API key)
-- [x] Changing only `VITE_AGENT_URL` retargets the UI (config wired)
-- [x] `make test` passes locally with the same commands CI runs
+- [ ] UI shows progressive streamed reply (needs `AI_GATEWAY_API_KEY`)
+- [x] `VITE_AGENT_URL` wires the full `/agui` endpoint
+- [x] Model defaults to `google/gemini-3.5-flash-lite` via Vercel AI Gateway
+- [x] `make test` passes

@@ -8,10 +8,11 @@ def _client() -> TestClient:
     config = BackendConfig(
         host="127.0.0.1",
         port=7777,
-        model_id="gpt-4o-mini",
+        model_id="google/gemini-3.5-flash-lite",
         agent_name="chat-agent",
         cors_origins=("http://localhost:5173",),
-        openai_api_key=None,
+        ai_gateway_api_key=None,
+        ai_gateway_base_url="https://ai-gateway.vercel.sh/v1",
     )
     app, _, _ = build_app(config)
     return TestClient(app)

@@ -6,6 +6,7 @@ Spec-driven monorepo for a simple Traditional Chinese **agent chat** app.
 | --- | --- | --- |
 | Frontend | Vite + React + **assistant-ui** (`@assistant-ui/react-ag-ui`) | `http://localhost:5173` |
 | Backend | **Agno AgentOS** + **AG-UI** interface | `http://localhost:7777` |
+| Model | **Vercel AI Gateway** → `google/gemini-3.5-flash-lite` | `AI_GATEWAY_API_KEY` |
 
 ## Commands
 
@@ -28,17 +29,18 @@ Copy `.env.example`. Important variables:
 | Variable | Where | Default | Purpose |
 | --- | --- | --- | --- |
 | `VITE_AGENT_URL` | frontend | `http://localhost:7777/agui` | **Full** AG-UI agent endpoint |
-| `OPENAI_API_KEY` | backend | — | Model provider key |
+| `AI_GATEWAY_API_KEY` | backend | — | Vercel AI Gateway API key |
+| `AI_GATEWAY_BASE_URL` | backend | `https://ai-gateway.vercel.sh/v1` | Gateway OpenAI-compatible base URL |
+| `AGENT_MODEL_ID` | backend | `google/gemini-3.5-flash-lite` | Gateway model id |
 | `AGENT_OS_PORT` | backend | `7777` | AgentOS listen port |
 | `AGENT_OS_HOST` | backend | `0.0.0.0` | Bind host |
-| `AGENT_MODEL_ID` | backend | `gpt-4o-mini` | Chat model id |
 | `AGENT_CORS_ORIGINS` | backend | Vite origins | Browser CORS allowlist |
 
 ## Quick start
 
 ```bash
 make install
-export OPENAI_API_KEY=sk-...
+export AI_GATEWAY_API_KEY=...   # from Vercel AI Gateway dashboard
 make backend    # terminal A
 make frontend   # terminal B
 ```
@@ -54,7 +56,7 @@ make status   # {"status":"available"}
 ## Layout
 
 ```text
-backend/     Agno AgentOS + AGUI
+backend/     Agno AgentOS + AGUI (Vercel AI Gateway / Gemini)
 frontend/    assistant-ui + HttpAgent
 specs/       Spec Kit artifacts (spec/plan/contracts/tasks)
 .specify/    Spec Kit project config + constitution
