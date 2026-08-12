@@ -1,0 +1,36 @@
+openapi: 3.1.0
+info:
+  title: Agent Chat Health API
+  version: 1.0.0
+  description: >
+    Versioned contract for backend health used by 001-agent-chat.
+    Implemented by Agno AgentOS GET /health.
+paths:
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Health check
+      description: Returns a simple status indicator when AgentOS is running.
+      responses:
+        "200":
+          description: API is healthy and operational
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ok
+                instantiated_at: "1766137017.573815"
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, instantiated_at]
+      properties:
+        status:
+          type: string
+          description: Health status of the service
+          examples: [ok]
+        instantiated_at:
+          type: string
+          description: Unix timestamp when the service was instantiated

@@ -1,0 +1,111 @@
+openapi: 3.1.0
+info:
+  title: Agent Chat Run Streaming API
+  version: 1.0.0
+  description: >
+    Versioned contract for creating a streaming agent run used by 001-agent-chat.
+    Subset of Agno AgentOS POST /agents/{agent_id}/runs with stream=true (SSE).
+paths:
+  /agents/{agent_id}/runs:
+    post:
+      operationId: createAgentRun
+      summary: Create agent run (streaming)
+      parameters:
+        - name: agent_id
+          in: path
+          required: true
+          schema:
+            type: string
+            examples: [chat-agent]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/CreateAgentRunRequest"
+      responses:
+        "200":
+          description: >
+            When stream=true, response is text/event-stream with Agno run events.
+            Content-bearing events carry incremental assistant text in data.content.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              examples:
+                run_stream:
+                  summary: Typical SSE sequence
+                  value: |
+                    event: RunStarted
+                    data: {"run_id":"run_abc","session_id":"thread-1"}
+
+                    event: RunContent
+                    data: {"run_id":"run_abc","content":"你"}
+
+                    event: RunContent
+                    data: {"run_id":"run_abc","content":"好"}
+
+                    event: RunCompleted
+                    data: {"run_id":"run_abc","content":"你好","status":"COMPLETED"}
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentRunResponse"
+        "400":
+          description: Invalid request
+        "404":
+          description: Agent not found
+        "422":
+          description: Validation error
+        "500":
+          description: Server error
+components:
+  schemas:
+    CreateAgentRunRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: User message text (may include a short transcript prefix)
+        stream:
+          type: boolean
+          default: true
+          description: MUST be true for the chat UI streaming path
+        session_id:
+          type: string
+          nullable: true
+          description: Page-scoped thread id
+        user_id:
+          type: string
+          nullable: true
+          description: Optional; unused for auth in v1
+    AgentRunResponse:
+      type: object
+      description: Non-streaming JSON body when stream=false (not used by UI path)
+      properties:
+        run_id:
+          type: string
+        session_id:
+          type: string
+        agent_id:
+          type: string
+        status:
+          type: string
+        content:
+          type: string
+    SseRunEvent:
+      type: object
+      description: Parsed SSE data payload (event name is the SSE event field)
+      properties:
+        run_id:
+          type: string
+        session_id:
+          type: string
+        content:
+          type: string
+          description: Incremental or final text when present
+        status:
+          type: string
+      additionalProperties: true
