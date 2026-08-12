@@ -1,0 +1,32 @@
+"""Explicit environment configuration for the AgentOS backend."""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class BackendConfig:
+    host: str
+    port: int
+    model_id: str
+    agent_name: str
+    cors_origins: tuple[str, ...]
+    openai_api_key: str | None
+
+
+def load_config() -> BackendConfig:
+    cors_raw = os.environ.get(
+        "AGENT_CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    )
+    origins = tuple(o.strip() for o in cors_raw.split(",") if o.strip())
+    return BackendConfig(
+        host=os.environ.get("AGENT_OS_HOST", "0.0.0.0"),
+        port=int(os.environ.get("AGENT_OS_PORT", "7777")),
+        model_id=os.environ.get("AGENT_MODEL_ID", "gpt-4o-mini"),
+        agent_name=os.environ.get("AGENT_NAME", "chat-agent"),
+        cors_origins=origins,
+        openai_api_key=os.environ.get("OPENAI_API_KEY"),
+    )

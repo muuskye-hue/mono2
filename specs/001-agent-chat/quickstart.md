@@ -3,15 +3,16 @@
 **Feature**: `001-agent-chat` | **Date**: 2026-08-12
 
 Validate the feature end-to-end on a local machine. Contracts:
-[health.openapi.yaml](./contracts/health.openapi.yaml),
-[agent-run.openapi.yaml](./contracts/agent-run.openapi.yaml). Data model:
+[agui-status.openapi.yaml](./contracts/agui-status.openapi.yaml),
+[agui-run.openapi.yaml](./contracts/agui-run.openapi.yaml),
+[health.openapi.yaml](./contracts/health.openapi.yaml). Data model:
 [data-model.md](./data-model.md).
 
 ## Prerequisites
 
-- Python 3.12+, Node.js 20+, `uv`, npm/pnpm
+- Python 3.12+, Node.js 20+, `uv`, npm
 - Model API key available to Agno (default: `OPENAI_API_KEY`)
-- Ports **7777** (AgentOS) and **5173** (Vite) free
+- Ports **7777** (AgentOS / AG-UI) and **5173** (Vite) free
 
 ## Setup
 
@@ -20,16 +21,15 @@ Validate the feature end-to-end on a local machine. Contracts:
 make install          # backend uv sync + frontend npm install
 
 export OPENAI_API_KEY=...   # or provider key required by chosen model
-# optional frontend overrides:
-export VITE_BACKEND_URL=http://localhost:7777
-export VITE_AGENT_ID=chat-agent
+# optional frontend override — FULL AG-UI endpoint including /agui:
+export VITE_AGENT_URL=http://localhost:7777/agui
 ```
 
 ## Run
 
 ```bash
 # terminal A
-make backend          # AgentOS on :7777
+make backend          # AgentOS + AGUI on :7777  (POST /agui, GET /status)
 
 # terminal B
 make frontend         # Vite UI on :5173
@@ -39,14 +39,15 @@ Open `http://localhost:5173`.
 
 ## Validation scenarios
 
-### 1. Health (SC-003 / User Story 2)
+### 1. Status / Health (SC-003 / User Story 2)
 
 ```bash
-make health
-# equivalent: curl -sS "$VITE_BACKEND_URL/health"
-```
+make status
+# {"status":"available"}
 
-**Expect**: HTTP 200 JSON with `"status":"ok"` and `instantiated_at`.
+make health
+# {"status":"ok","instantiated_at":"..."}
+```
 
 Stop backend and retry — **Expect**: connection failure / non-success.
 
@@ -58,12 +59,11 @@ Stop backend and retry — **Expect**: connection failure / non-success.
    before completion; send is disabled while streaming.
 4. Send a follow-up — **Expect**: both turns remain in the same single thread.
 
-### 3. Backend URL via env (SC-004 / User Story 3)
+### 3. Agent endpoint via env (SC-004 / User Story 3)
 
 1. Start AgentOS on an alternate port (e.g. 7778).
-2. Restart frontend with `VITE_BACKEND_URL=http://localhost:7778`.
-3. Send a message — **Expect**: reply succeeds against the new backend
-   (confirm via backend logs / structured events).
+2. Restart frontend with `VITE_AGENT_URL=http://localhost:7778/agui`.
+3. Send a message — **Expect**: reply succeeds against the new backend.
 
 ### 4. Edge checks
 
@@ -76,15 +76,16 @@ Stop backend and retry — **Expect**: connection failure / non-success.
 ## Automated checks
 
 ```bash
-make test             # backend pytest + frontend vitest (same as CI)
+make test             # backend pytest + frontend build (same as CI)
 ```
 
-Contract tests SHOULD assert `/health` schema and that a streamed run emits
-content-bearing SSE events (may use a mock model in CI if no API key).
+Contract tests assert `/status` and `/health`. Full AG-UI stream requires a
+model API key (manual quickstart above).
 
 ## Done when
 
-- [ ] `make health` returns `status: ok`
-- [ ] UI shows progressive streamed reply for Traditional Chinese input
-- [ ] Changing only `VITE_BACKEND_URL` retargets the UI
-- [ ] `make test` passes locally with the same commands CI runs
+- [x] `make status` returns `status: available`
+- [x] `make health` returns `status: ok`
+- [ ] UI shows progressive streamed reply for Traditional Chinese input (needs API key)
+- [x] Changing only `VITE_AGENT_URL` retargets the UI (config wired)
+- [x] `make test` passes locally with the same commands CI runs

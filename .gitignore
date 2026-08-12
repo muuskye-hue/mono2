@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+backend/.venv/
+backend/uv.lock.bak
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.log
+npm-debug.log*
+
+# Env / secrets
+.env
+.env.local
+frontend/.env
+frontend/.env.local
+backend/.env
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Spec Kit machine-local
+.specify/feature.json
+.specify/extensions/*/local-config.yml

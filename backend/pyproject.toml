@@ -1,0 +1,32 @@
+[project]
+name = "agent-chat-backend"
+version = "0.1.0"
+description = "Agno AgentOS backend with AG-UI for mono2 agent chat"
+requires-python = ">=3.12"
+dependencies = [
+  "agno[os,agui]>=2.0.0",
+  "openai>=1.0.0",
+]
+
+[project.scripts]
+agent-chat-backend = "agent_chat.app:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_chat"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src/agent_chat" = "agent_chat"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0.0",
+  "httpx>=0.27.0",
+]

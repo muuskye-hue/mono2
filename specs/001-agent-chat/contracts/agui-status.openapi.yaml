@@ -1,0 +1,29 @@
+openapi: 3.1.0
+info:
+  title: Agent Chat AG-UI Status API
+  version: 1.0.0
+  description: >
+    AG-UI interface status for 001-agent-chat (Agno AgentOS AGUI).
+paths:
+  /status:
+    get:
+      operationId: aguiStatus
+      summary: AG-UI interface status
+      responses:
+        "200":
+          description: Interface is available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AguiStatusResponse"
+              example:
+                status: available
+components:
+  schemas:
+    AguiStatusResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          examples: [available]

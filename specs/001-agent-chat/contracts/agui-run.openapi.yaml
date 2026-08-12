@@ -1,0 +1,59 @@
+openapi: 3.1.0
+info:
+  title: Agent Chat AG-UI Run API
+  version: 1.0.0
+  description: >
+    AG-UI protocol entrypoint for 001-agent-chat.
+    Frontend HttpAgent posts to the full agent URL ending in /agui.
+paths:
+  /agui:
+    post:
+      operationId: runAgentAgui
+      summary: Run agent via AG-UI protocol
+      description: >
+        Accepts ag-ui-protocol RunAgentInput (JSON) and streams AG-UI events
+        as text/event-stream.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunAgentInput"
+      responses:
+        "200":
+          description: SSE stream of AG-UI events
+          content:
+            text/event-stream:
+              schema:
+                type: string
+components:
+  schemas:
+    RunAgentInput:
+      type: object
+      description: >
+        Payload defined by ag-ui-protocol. Exact fields are owned by the
+        protocol version negotiated by @ag-ui/client and Agno AGUI.
+      additionalProperties: true
+      properties:
+        threadId:
+          type: string
+        runId:
+          type: string
+        messages:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        tools:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        context:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        forwardedProps:
+          type: object
+          additionalProperties: true
